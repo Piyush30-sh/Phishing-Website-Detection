@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Advanced Phishing Detection Tool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="bg-layer" aria-hidden="true"></div>
+<div class="app-shell">
+    <header class="topbar">
+        <div class="brand-wrap">
+            <div class="logo" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L4 5V11C4 16.55 7.84 21.74 12 23C16.16 21.74 20 16.55 20 11V5L12 2Z" stroke="currentColor" stroke-width="1.7"/>
+                    <path d="M9 12.3L11 14.3L15.2 10.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div>
+                <h1>Phishing Detection Tool</h1>
+                <p>Rule-based URL threat analysis with explainability and batch scanning.</p>
+            </div>
+        </div>
+        <button id="themeToggleBtn" class="btn ghost" type="button" aria-label="Toggle dark or light theme">
+            <span id="themeToggleText">Light Mode</span>
+        </button>
+    </header>
+
+    <main>
+        <section class="panel" aria-labelledby="analyzerTitle">
+            <div class="panel-head">
+                <h2 id="analyzerTitle">Analyzer</h2>
+                <div class="mode-toggle" role="tablist" aria-label="Analysis mode">
+                    <button id="singleModeBtn" class="mode-btn active" role="tab" aria-selected="true" aria-controls="singleModePanel" type="button">Single URL</button>
+                    <button id="batchModeBtn" class="mode-btn" role="tab" aria-selected="false" aria-controls="batchModePanel" type="button">Batch Analysis</button>
+                </div>
+            </div>
+
+            <div id="singleModePanel" role="tabpanel" aria-labelledby="singleModeBtn">
+                <label class="input-label" for="urlInput">Website URL</label>
+                <div class="inline-inputs">
+                    <input id="urlInput" type="text" autocomplete="off" placeholder="https://example.com/login" aria-label="Enter one URL for analysis">
+                    <button id="analyzeBtn" class="btn primary" type="button" aria-label="Analyze single URL">
+                        <span id="analyzeBtnText">Analyze URL</span>
+                        <span id="analyzeBtnLoader" class="loader hidden" aria-hidden="true"></span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="batchModePanel" class="hidden" role="tabpanel" aria-labelledby="batchModeBtn">
+                <label class="input-label" for="batchInput">One URL per line</label>
+                <textarea id="batchInput" rows="8" placeholder="https://example1.com&#10;https://example2.com" aria-label="Enter multiple URLs, one per line"></textarea>
+                <div class="inline-inputs compact">
+                    <button id="analyzeBatchBtn" class="btn primary" type="button" aria-label="Analyze batch URLs">
+                        <span id="analyzeBatchBtnText">Analyze Batch</span>
+                        <span id="analyzeBatchBtnLoader" class="loader hidden" aria-hidden="true"></span>
+                    </button>
+                    <span class="hint-text">Batch limit: 100 URLs/request</span>
+                </div>
+            </div>
+
+            <p id="errorMsg" class="error-msg hidden" aria-live="assertive"></p>
+        </section>
+
+        <section id="singleResultPanel" class="panel hidden" aria-labelledby="singleResultTitle">
+            <div class="panel-head align-center">
+                <h2 id="singleResultTitle">Single Analysis Result</h2>
+                <button id="copyResultBtn" class="btn ghost" type="button" aria-label="Copy single analysis result as text">Copy Result</button>
+            </div>
+
+            <div class="result-grid">
+                <div class="ring-card">
+                    <svg id="riskRing" class="risk-ring" viewBox="0 0 120 120" aria-label="Risk score ring">
+                        <circle class="ring-track" cx="60" cy="60" r="52"></circle>
+                        <circle id="ringProgress" class="ring-progress" cx="60" cy="60" r="52"></circle>
+                    </svg>
+                    <div class="ring-content">
+                        <span id="scoreValue" class="score-value">0%</span>
+                        <span class="score-label">Risk Score</span>
+                    </div>
+                </div>
+
+                <div class="summary-card">
+                    <div class="summary-row">
+                        <span class="key">Risk Level</span>
+                        <strong id="riskLevelText">-</strong>
+                    </div>
+                    <div class="summary-row">
+                        <span class="key">Confidence</span>
+                        <strong id="confidenceText">-</strong>
+                    </div>
+                    <div class="summary-row wrap">
+                        <span class="key">Analyzed URL</span>
+                        <code id="analyzedUrl">-</code>
+                    </div>
+                    <div class="summary-row wrap">
+                        <span class="key">Recommendation</span>
+                        <p id="recommendationText">-</p>
+                    </div>
+                </div>
+
+                <div class="summary-card external-card">
+                    <div class="summary-row wrap">
+                        <span class="key">Typosquatting Match</span>
+                        <p id="typosquatText">-</p>
+                    </div>
+                    <div class="summary-row wrap">
+                        <span class="key">SSL Certificate</span>
+                        <p id="sslCertText">-</p>
+                    </div>
+                    <div class="summary-row wrap">
+                        <span class="key">Blocklist Status</span>
+                        <p id="blocklistText">-</p>
+                    </div>
+                    <div class="summary-row wrap">
+                        <span class="key">Score Interaction</span>
+                        <p id="interactionText">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="reason-groups">
+                <h3>Triggered Reasons</h3>
+                <div id="reasonGroupWrap" class="group-wrap"></div>
+            </div>
+        </section>
+
+        <section id="batchResultPanel" class="panel hidden" aria-labelledby="batchResultTitle">
+            <div class="panel-head align-center">
+                <h2 id="batchResultTitle">Batch Results</h2>
+                <p class="hint-text">Click a column header to sort.</p>
+            </div>
+            <div class="table-wrap" role="region" aria-label="Batch results table" tabindex="0">
+                <table id="batchResultTable">
+                    <thead>
+                        <tr>
+                            <th><button class="sort-btn" data-sort="url" type="button">URL</button></th>
+                            <th><button class="sort-btn" data-sort="risk_score" type="button">Score</button></th>
+                            <th><button class="sort-btn" data-sort="risk_level" type="button">Risk Level</button></th>
+                            <th><button class="sort-btn" data-sort="timestamp" type="button">Timestamp</button></th>
+                        </tr>
+                    </thead>
+                    <tbody id="batchTableBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panel" aria-labelledby="historyTitle">
+            <div class="panel-head align-center">
+                <h2 id="historyTitle">Detection History</h2>
+                <div class="history-actions">
+                    <button id="exportCsvBtn" class="btn ghost" type="button" aria-label="Export history as CSV">Export CSV</button>
+                    <button id="clearHistoryBtn" class="btn danger" type="button" aria-label="Clear detection history">Clear History</button>
+                </div>
+            </div>
+
+            <div class="history-toolbar">
+                <input id="historySearchInput" type="search" placeholder="Filter by URL or risk level" aria-label="Filter history by URL or risk level">
+                <select id="historyRiskFilter" aria-label="Filter history by risk level">
+                    <option value="all">All Levels</option>
+                    <option value="safe">Safe</option>
+                    <option value="caution">Caution</option>
+                    <option value="suspicious">Suspicious</option>
+                    <option value="high risk">High Risk</option>
+                </select>
+            </div>
+
+            <div id="historyList" class="history-list" aria-live="polite"></div>
+            <div class="history-footer">
+                <p id="historyInfo" class="hint-text">0 items</p>
+                <button id="loadMoreHistoryBtn" class="btn ghost hidden" type="button" aria-label="Load more history entries">Load More</button>
+            </div>
+        </section>
+    </main>
+
+
+</div>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
